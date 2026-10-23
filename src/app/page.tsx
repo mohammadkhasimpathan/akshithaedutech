@@ -83,18 +83,22 @@ export default async function HomePage() {
 
             {/* Fresher & Experienced Entry Points */}
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-              <Link href="/jobs?exp=fresher">
-                <Button variant="outline" size="md" className="gap-2 rounded-xl border-emerald-300 hover:border-emerald-500 text-emerald-800 hover:bg-emerald-50 dark:text-emerald-300">
-                  <GraduationCap className="w-4 h-4 text-emerald-600" />
-                  Browse Freshers Jobs (0-1 yrs)
-                </Button>
+              <Link
+                href="/jobs?exp=fresher"
+                role="button"
+                className="inline-flex items-center justify-center font-medium rounded-xl transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 text-sm px-4 py-2 h-10 gap-2 border border-emerald-300 hover:border-emerald-500 text-emerald-800 hover:bg-emerald-50 dark:border-slate-700 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-slate-800 shadow-sm"
+              >
+                <GraduationCap className="w-4 h-4 text-emerald-600" />
+                Browse Freshers Jobs (0-1 yrs)
               </Link>
 
-              <Link href="/jobs?exp=experienced">
-                <Button variant="outline" size="md" className="gap-2 rounded-xl border-blue-300 hover:border-blue-500 text-blue-800 hover:bg-blue-50 dark:text-blue-300">
-                  <Users className="w-4 h-4 text-blue-600" />
-                  Experienced Openings (2+ yrs)
-                </Button>
+              <Link
+                href="/jobs?exp=experienced"
+                role="button"
+                className="inline-flex items-center justify-center font-medium rounded-xl transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 text-sm px-4 py-2 h-10 gap-2 border border-blue-300 hover:border-blue-500 text-blue-800 hover:bg-blue-50 dark:border-slate-700 dark:bg-slate-900 dark:text-blue-300 dark:hover:bg-slate-800 shadow-sm"
+              >
+                <Users className="w-4 h-4 text-blue-600" />
+                Experienced Openings (2+ yrs)
               </Link>
             </div>
           </div>

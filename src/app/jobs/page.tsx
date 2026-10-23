@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { Metadata } from 'next';
 import { Navbar } from '@/components/shared/navbar';
 import { Footer } from '@/components/shared/footer';
@@ -11,11 +12,34 @@ export const metadata: Metadata = {
     'Explore verified job vacancies for freshers and experienced candidates. Direct applications with no candidate login required.',
 };
 
-export default async function JobsPage({
-  searchParams,
-}: {
+interface JobsPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}) {
+}
+
+function JobsBrowserSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse" data-testid="jobs-browser-skeleton">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 space-y-4">
+        <div className="h-11 w-full rounded-xl bg-slate-100 dark:bg-slate-800" />
+        <div className="flex gap-2">
+          <div className="h-8 w-28 rounded-xl bg-slate-100 dark:bg-slate-800" />
+          <div className="h-8 w-28 rounded-xl bg-slate-100 dark:bg-slate-800" />
+          <div className="h-8 w-28 rounded-xl bg-slate-100 dark:bg-slate-800" />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {[1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className="h-56 rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 space-y-3"
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+async function JobsBrowserContent({ searchParams }: JobsPageProps) {
   const resolvedParams = await searchParams;
 
   const searchQuery = typeof resolvedParams.q === 'string' ? resolvedParams.q : undefined;
@@ -50,6 +74,17 @@ export default async function JobsPage({
   });
 
   return (
+    <JobsBrowser
+      initialJobs={jobs}
+      totalCount={count}
+      currentPage={currentPage}
+      pageSize={pageSize}
+    />
+  );
+}
+
+export default function JobsPage({ searchParams }: JobsPageProps) {
+  return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
 
@@ -65,13 +100,10 @@ export default async function JobsPage({
             </p>
           </div>
 
-          {/* Interactive Browser with Filter Tabs and Job Cards */}
-          <JobsBrowser
-            initialJobs={jobs}
-            totalCount={count}
-            currentPage={currentPage}
-            pageSize={pageSize}
-          />
+          {/* Interactive Browser with Suspense Boundary */}
+          <React.Suspense fallback={<JobsBrowserSkeleton />}>
+            <JobsBrowserContent searchParams={searchParams} />
+          </React.Suspense>
         </div>
       </main>
 

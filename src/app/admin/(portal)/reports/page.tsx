@@ -9,11 +9,32 @@ export const metadata: Metadata = {
   title: 'Job Issue Reports | Admin Portal',
 };
 
-export default async function AdminReportsPage({
-  searchParams,
-}: {
+interface AdminReportsPageProps {
   searchParams: Promise<{ status?: string; page?: string }>;
-}) {
+}
+
+function ReportsSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse" data-testid="reports-skeleton">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
+        <div className="space-y-2">
+          <div className="h-8 bg-slate-200 dark:bg-slate-800 rounded-xl w-64" />
+          <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-lg w-96" />
+        </div>
+      </div>
+
+      <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded-lg w-44" />
+
+      <div className="space-y-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-28 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+async function ReportsDataContent({ searchParams }: AdminReportsPageProps) {
   await connection();
   const resolvedParams = await searchParams;
 
@@ -35,5 +56,13 @@ export default async function AdminReportsPage({
       initialLimit={limit}
       initialStatus={statusParam}
     />
+  );
+}
+
+export default function AdminReportsPage({ searchParams }: AdminReportsPageProps) {
+  return (
+    <React.Suspense fallback={<ReportsSkeleton />}>
+      <ReportsDataContent searchParams={searchParams} />
+    </React.Suspense>
   );
 }

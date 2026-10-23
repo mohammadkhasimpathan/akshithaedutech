@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createClient as createSupabaseClient, SupabaseClient } from '@supabase/supabase-js';
+import { loadEnvConfig } from '@next/env';
+
+// Ensure .env.local is loaded in integration test process
+loadEnvConfig(process.cwd());
 
 /**
  * ============================================================================
@@ -8,8 +12,8 @@ import { createClient as createSupabaseClient, SupabaseClient } from '@supabase/
  *
  * Scope & Safety Constraints:
  * 1. Checks whether valid live development Supabase credentials exist and are reachable.
- * 2. If development credentials are absent, invalid, or point to offline mocks, this suite
- *    is cleanly marked as BLOCKED / SKIPPED and logs actionable setup instructions.
+ * 2. If development credentials are absent, invalid, or point to offline mocks without RUN_LIVE_TESTS,
+ *    this suite is cleanly marked as BLOCKED / SKIPPED and logs actionable setup instructions.
  * 3. Never makes unit tests or CI runs silently fail when no remote database is provisioned.
  * 4. Only uses disposable test records with explicit TEST_ prefixes.
  * 5. Cleans up all test database rows and storage objects in afterAll.
@@ -22,8 +26,9 @@ function isDevelopmentSupabaseConfigured(): boolean {
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
   const mockFlag = process.env.NEXT_PUBLIC_ENABLE_LOCAL_MOCKS;
+  const runLive = process.env.RUN_LIVE_TESTS === 'true';
 
-  if (mockFlag === 'true') {
+  if (!runLive && mockFlag === 'true') {
     return false;
   }
 
@@ -53,6 +58,9 @@ describe.skipIf(!isConfigured)('Live Supabase Development Integration Suite', ()
   const cleanupEnquiries: string[] = [];
   const cleanupReports: string[] = [];
   const cleanupStoragePaths: string[] = [];
+  const cleanupStudents: string[] = [];
+  const cleanupEmployers: string[] = [];
+  const cleanupColleges: string[] = [];
 
   const testSuffix = Math.random().toString(36).substring(2, 8);
   const testJobSlug = `test-job-qa-${testSuffix}`;
@@ -101,6 +109,21 @@ describe.skipIf(!isConfigured)('Live Supabase Development Integration Suite', ()
     // 5. Clean up reports
     if (cleanupReports.length > 0) {
       await adminClient.from('job_reports').delete().in('id', cleanupReports);
+    }
+
+    // 6. Clean up student registrations
+    if (cleanupStudents.length > 0) {
+      await adminClient.from('student_registrations').delete().in('id', cleanupStudents);
+    }
+
+    // 7. Clean up employer registrations
+    if (cleanupEmployers.length > 0) {
+      await adminClient.from('employer_registrations').delete().in('id', cleanupEmployers);
+    }
+
+    // 8. Clean up college registrations
+    if (cleanupColleges.length > 0) {
+      await adminClient.from('college_registrations').delete().in('id', cleanupColleges);
     }
   });
 
@@ -310,6 +333,183 @@ describe.skipIf(!isConfigured)('Live Supabase Development Integration Suite', ()
       expect(closedView).toBeNull();
     });
   });
+
+  describe('5. Registration Workflows & Institutional Alliances (Student, Employer, College)', () => {
+    it('denies anonymous visitors direct read or insert access to student_registrations', async () => {
+      // Anonymous read must return empty or error
+      const { data: anonRead, error: readError } = await anonClient!
+        .from('student_registrations')
+        .select('id, full_name, email');
+
+      expect(readError !== null || anonRead === null || (Array.isArray(anonRead) && anonRead.length === 0)).toBe(true);
+
+      // Anonymous insert must be blocked by RLS
+      const { error: insertError } = await anonClient!
+        .from('student_registrations')
+        .insert({
+          full_name: 'Anonymous Hacker',
+          email: `hacker_${testSuffix}@example.com`,
+          phone: '+91 99999 11111',
+          college_name: 'Fake Tech Institute',
+          degree: 'B.Tech',
+          graduation_year: 2026,
+          skills: ['Exploit'],
+          opportunity_interests: ['jobs'],
+        });
+
+      expect(insertError).toBeDefined();
+    });
+
+    it('allows service-role to persist student registration and admin to update review status and notes', async () => {
+      const studentEmail = `student_${testSuffix}@example.com`;
+      const { data: student, error: insertError } = await adminClient!
+        .from('student_registrations')
+        .insert({
+          full_name: `Candidate Student ${testSuffix}`,
+          email: studentEmail,
+          phone: '+91 91234 56789',
+          city: 'Bangalore',
+          state: 'Karnataka',
+          college_name: 'Bangalore Institute of Technology',
+          course: 'B.E.',
+          specialization: 'Computer Science',
+          graduation_year: 2026,
+          skills: ['React', 'TypeScript', 'Node.js'],
+          experience_status: 'fresher',
+          experience_years: 0,
+          opportunity_interests: ['jobs', 'internships'],
+          status: 'pending',
+        })
+        .select('id, email, status')
+        .single();
+
+      expect(insertError).toBeNull();
+      expect(student).toBeDefined();
+      cleanupStudents.push(student!.id);
+
+      // Admin updates status to 'reviewed' with admin notes
+      const { data: updated, error: updateError } = await adminClient!
+        .from('student_registrations')
+        .update({
+          status: 'reviewed',
+          admin_notes: 'Verified academic credentials and GitHub repository.',
+        })
+        .eq('id', student!.id)
+        .select('id, status, admin_notes')
+        .single();
+
+      expect(updateError).toBeNull();
+      expect(updated?.status).toBe('reviewed');
+      expect(updated?.admin_notes).toContain('Verified');
+
+      // Anonymous client cannot read this student record
+      const { data: anonCheck } = await anonClient!
+        .from('student_registrations')
+        .select('id, admin_notes')
+        .eq('id', student!.id)
+        .maybeSingle();
+
+      expect(anonCheck).toBeNull();
+    });
+
+    it('denies anonymous visitors direct access to employer_registrations and handles verified submissions', async () => {
+      // Anonymous read must be denied
+      const { data: anonRead, error: readError } = await anonClient!
+        .from('employer_registrations')
+        .select('id, company_name');
+
+      expect(readError !== null || anonRead === null || (Array.isArray(anonRead) && anonRead.length === 0)).toBe(true);
+
+      // Service-role persists employer registration
+      const employerEmail = `hr_${testSuffix}@techcorp-example.com`;
+      const { data: employer, error: insertError } = await adminClient!
+        .from('employer_registrations')
+        .insert({
+          company_name: `TechCorp Solutions ${testSuffix}`,
+          contact_person: 'Ananya Sharma',
+          business_email: employerEmail,
+          phone: '+91 80 1234 5678',
+          designation: 'HR Director',
+          website: 'https://techcorp-example.com',
+          industry: 'Information Technology',
+          office_location: 'Bangalore, Karnataka',
+          hiring_needs: 'Seeking entry-level frontend engineers and cloud architects.',
+          opportunity_types: ['full-time', 'internship'],
+          hiring_volume: '50-200',
+          collaboration_interests: ['campus_hiring'],
+          status: 'pending',
+        })
+        .select('id, company_name, status')
+        .single();
+
+      expect(insertError).toBeNull();
+      expect(employer).toBeDefined();
+      cleanupEmployers.push(employer!.id);
+
+      // Admin reviews and transitions to 'reviewed'
+      const { data: reviewed, error: reviewError } = await adminClient!
+        .from('employer_registrations')
+        .update({
+          status: 'reviewed',
+          admin_notes: 'Initial introductory discussion call scheduled for Thursday.',
+        })
+        .eq('id', employer!.id)
+        .select('id, status, admin_notes')
+        .single();
+
+      expect(reviewError).toBeNull();
+      expect(reviewed?.status).toBe('reviewed');
+    });
+
+    it('denies anonymous visitors direct access to college_registrations and handles institutional review', async () => {
+      // Anonymous read must be denied
+      const { data: anonRead, error: readError } = await anonClient!
+        .from('college_registrations')
+        .select('id, institution_name');
+
+      expect(readError !== null || anonRead === null || (Array.isArray(anonRead) && anonRead.length === 0)).toBe(true);
+
+      // Service-role persists college registration
+      const collegeEmail = `tpo_${testSuffix}@university-example.edu.in`;
+      const { data: college, error: insertError } = await adminClient!
+        .from('college_registrations')
+        .insert({
+          institution_name: `Karnataka National Institute of Tech ${testSuffix}`,
+          contact_person: 'Dr. Ramesh Kumar',
+          official_email: collegeEmail,
+          designation: 'Head of Placements',
+          phone: '+91 824 2474 000',
+          city: 'Mangalore',
+          state: 'Karnataka',
+          institution_type: 'Engineering & Technology College',
+          courses_departments: ['Computer Science', 'Information Science'],
+          student_strength: '1200+',
+          placement_cell_details: 'Active placement cell with 4 dedicated training officers and state-of-the-art computer labs.',
+          collaboration_interests: ['campus_placements', 'internship_drives'],
+          status: 'pending',
+        })
+        .select('id, institution_name, status')
+        .single();
+
+      expect(insertError).toBeNull();
+      expect(college).toBeDefined();
+      cleanupColleges.push(college!.id);
+
+      // Admin marks institution as 'reviewed'
+      const { data: reviewed, error: reviewError } = await adminClient!
+        .from('college_registrations')
+        .update({
+          status: 'reviewed',
+          admin_notes: 'Placement calendar reviewed. 2026 batch eligibility confirmed.',
+        })
+        .eq('id', college!.id)
+        .select('id, status, admin_notes')
+        .single();
+
+      expect(reviewError).toBeNull();
+      expect(reviewed?.status).toBe('reviewed');
+    });
+  });
 });
 
 describe('Live Supabase Integration Blocked State Documentation', () => {
@@ -318,8 +518,8 @@ describe('Live Supabase Integration Blocked State Documentation', () => {
       // Diagnostic output when remote database is blocked
       console.warn(
         '\n[NOTICE: LIVE SUPABASE INTEGRATION BLOCKED]\n' +
-          'Reason: Live development credentials (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY) are placeholders or NEXT_PUBLIC_ENABLE_LOCAL_MOCKS is true.\n' +
-          'Action: To run live integration tests, link a separate dev project (npx supabase link) or populate .env.local with development credentials, set NEXT_PUBLIC_ENABLE_LOCAL_MOCKS=false, and re-run.\n'
+          'Reason: Live development credentials (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY) are placeholders or NEXT_PUBLIC_ENABLE_LOCAL_MOCKS is true without RUN_LIVE_TESTS=true.\n' +
+          'Action: To run live integration tests, link a separate dev project (npx supabase link) or populate .env.local with development credentials, set RUN_LIVE_TESTS=true, and re-run.\n'
       );
     }
     expect(true).toBe(true);

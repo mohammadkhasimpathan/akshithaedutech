@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { submitCollegeRegistration } from '@/app/actions/registration-actions';
+import { Navbar } from '@/components/shared/navbar';
+import { Footer } from '@/components/shared/footer';
 import {
   CheckCircle2,
   AlertCircle,
@@ -99,49 +101,55 @@ export default function CollegeRegistrationPage() {
 
   if (result?.success) {
     return (
-      <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-950">
-        <div className="max-w-lg w-full bg-white dark:bg-slate-900 rounded-3xl p-8 sm:p-10 border border-slate-200 dark:border-slate-800 shadow-xl text-center">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center mb-6">
-            <CheckCircle2 className="w-9 h-9" />
-          </div>
+      <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-lg w-full bg-white dark:bg-slate-900 rounded-3xl p-8 sm:p-10 border border-slate-200 dark:border-slate-800 shadow-xl text-center">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center mb-6">
+              <CheckCircle2 className="w-9 h-9" />
+            </div>
 
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100">
-            Registration Submitted!
-          </h2>
-          <p className="text-slate-600 dark:text-slate-400 mt-2 text-sm leading-relaxed">
-            {result.message}
-          </p>
-
-          <div className="my-6 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-            <span className="text-xs uppercase font-semibold text-slate-500 dark:text-slate-400 tracking-wider">
-              Institution Reference ID
-            </span>
-            <p className="font-mono font-bold text-lg text-teal-600 dark:text-teal-400 mt-1">
-              {result.referenceId}
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100">
+              Registration Submitted!
+            </h2>
+            <p className="text-slate-600 dark:text-slate-400 mt-2 text-sm leading-relaxed">
+              {result.message}
             </p>
-          </div>
 
-          <div className="p-4 rounded-xl bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-900 text-xs text-teal-800 dark:text-teal-300 mb-8 text-left leading-relaxed">
-            <p className="font-semibold mb-1">Pending Review Workflow:</p>
-            Our institutional partnerships cell will review the official contact details and placement cell requirements. A partnership executive will reach out to schedule an introductory alignment call.
-          </div>
+            <div className="my-6 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+              <span className="text-xs uppercase font-semibold text-slate-500 dark:text-slate-400 tracking-wider">
+                Institution Reference ID
+              </span>
+              <p className="font-mono font-bold text-lg text-teal-600 dark:text-teal-400 mt-1">
+                {result.referenceId}
+              </p>
+            </div>
 
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Link href="/" className="flex-1">
-              <Button className="w-full">Back to Home</Button>
-            </Link>
-            <Link href="/contact" className="flex-1">
-              <Button variant="outline" className="w-full">Contact Support</Button>
-            </Link>
+            <div className="p-4 rounded-xl bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-900 text-xs text-teal-800 dark:text-teal-300 mb-8 text-left leading-relaxed">
+              <p className="font-semibold mb-1">Pending Review Workflow:</p>
+              Our institutional partnerships cell will review the official contact details and placement cell requirements. A partnership executive will reach out to schedule an introductory alignment call.
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Link href="/" className="flex-1">
+                <Button className="w-full">Back to Home</Button>
+              </Link>
+              <Link href="/contact" className="flex-1">
+                <Button variant="outline" className="w-full">Contact Support</Button>
+              </Link>
+            </div>
           </div>
-        </div>
+        </main>
+        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-950">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <Navbar />
+      <main className="flex-1 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-100 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 text-xs font-semibold mb-4">
@@ -486,6 +494,8 @@ export default function CollegeRegistrationPage() {
           </form>
         </div>
       </div>
-    </div>
+    </main>
+    <Footer />
+  </div>
   );
 }
